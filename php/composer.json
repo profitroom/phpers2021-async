@@ -1,0 +1,19 @@
+{
+  "name": "krzysiok/plain-php",
+  "authors": [
+    {
+      "name": "Krzysztof Kowalczykiewicz",
+      "email": "krzysztof.kowalczykiewicz@profitroom.com"
+    }
+  ],
+  "require": {
+    "bunny/bunny": "@dev",
+    "vlucas/phpdotenv": "^5.3",
+    "ext-pdo": "*",
+    "ext-json": "*",
+    "opentracing/opentracing": "^1.0",
+    "jonahgeorge/jaeger-client-php": "^1.2",
+    "ext-pcntl": "*",
+    "analog/analog": "^1.0"
+  }
+}

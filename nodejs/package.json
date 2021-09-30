@@ -1,0 +1,19 @@
+{
+  "dependencies": {
+    "amqplib": "^0.8.0",
+    "dotenv": "^10.0.0",
+    "jaeger-client": "^3.18.1",
+    "mysql2": "^2.3.0",
+    "opentracing": "^0.14.5"
+  },
+  "type": "commonjs",
+  "name": "nodejs",
+  "version": "1.0.0",
+  "main": "boot.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": ""
+}

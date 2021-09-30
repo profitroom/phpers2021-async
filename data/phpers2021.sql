@@ -1,0 +1,11 @@
+CREATE DATABASE IF NOT EXISTS phpers2021;
+
+USE phpers2021;
+
+CREATE TABLE IF NOT EXISTS data
+(
+    id INT NOT NULL auto_increment PRIMARY KEY,
+    value INT
+);
+
+INSERT INTO data SELECT seq, RAND() FROM seq_1_to_1000;
