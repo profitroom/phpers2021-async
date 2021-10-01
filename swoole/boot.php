@@ -12,6 +12,10 @@ $logger = new \Analog\Logger();
 $logger->handler(\Analog\Handler\Stderr::init());
 $logger->info("starting $process #".getmypid());
 
+register_shutdown_function(function() use ($logger, $process) {
+    $logger->info("shutdown $process #".getmypid());
+});
+
 $config = new Config(
     [
         // socket-based dispatching not working with Swoole
@@ -21,9 +25,6 @@ $config = new Config(
             'param' => true,
         ],
 //        'logging' => true,
-        'local_agent' => [
-            'reporting_host' => 'localhost',
-        ],
     ],
     $process,
     $logger
@@ -31,11 +32,7 @@ $config = new Config(
 $config->initializeTracer();
 $tracer = GlobalTracer::get();
 
-$appScope = $tracer->startActiveSpan('process');
-
-pcntl_signal(SIGINT, function() use ($tracer) {
-    $tracer->flush();
-});
+$appScope = $tracer->startActiveSpan('process', ['tags' => ['impl' => basename(__DIR__)]]);
 
 $scope = $tracer->startActiveSpan('dotenv');
     $dotenv = Dotenv\Dotenv::createImmutable('../');
