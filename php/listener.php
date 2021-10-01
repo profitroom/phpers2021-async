@@ -10,9 +10,6 @@ require 'vendor/autoload.php';
 $process = 'listener';
 require 'boot.php';
 
-$channel = $bunny->channel();
-$channel->queueDeclare('events_queue');
-
 $scope = $tracer->startActiveSpan('listening');
 try {
     $channel->run(function (Message $message, Channel $channel, Client $bunny) use ($tracer) {
@@ -33,7 +30,7 @@ try {
         }
     }, 'events_queue');
 } catch (\Bunny\Exception\ClientException $e) {
-    $logger->error($e->getMessage());
+    $logger->info($e->getMessage());
 }
 $channel->close();
 $bunny->disconnect();

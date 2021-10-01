@@ -5,9 +5,6 @@ require 'vendor/autoload.php';
 $process = 'producer';
 require 'boot.php';
 
-$channel = $bunny->channel();
-$channel->queueDeclare('message_queue');
-
 $scope = $tracer->startActiveSpan('producing');
     $headers = [];
     $tracer->inject($scope->getSpan()->getContext(), OpenTracing\Formats\HTTP_HEADERS, $headers);

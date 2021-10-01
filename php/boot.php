@@ -16,6 +16,7 @@ register_shutdown_function(function() use ($logger, $process) {
 
 $config = new Config(
     [
+        'dispatch_mode' => Config::JAEGER_OVER_BINARY_HTTP,
         'sampler' => [
             'type' => Jaeger\SAMPLER_TYPE_CONST,
             'param' => true,
@@ -23,7 +24,7 @@ $config = new Config(
 //        'logging' => true,
         'local_agent' => [
             'reporting_host' => 'localhost',
-            'reporting_port' => 6831
+//            'reporting_port' => 6831
         ],
     ],
     $process,
@@ -39,11 +40,14 @@ pcntl_signal(SIGINT, function() use ($tracer) {
 });
 
 $scope = $tracer->startActiveSpan('dotenv');
-    $dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
+    $dotenv = Dotenv\Dotenv::createImmutable(__DIR__.'/..');
     $dotenv->load();
 $scope->close();
 
 $scope = $tracer->startActiveSpan('rabbitmq-connect');
     $bunny = new Client();
     $bunny->connect();
+    $channel = $bunny->channel();
+    $channel->queueDeclare('message_queue', false, true);
+    $channel->queueDeclare('events_queue', false, true);
 $scope->close();

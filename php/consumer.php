@@ -11,21 +11,15 @@ $process = 'consumer';
 require 'boot.php';
 
 $scope = $tracer->startActiveSpan('mysql-connect');
-    $pdo = new PDO('mysql:host=' . getenv('DB_HOST') . ';dbname=' . getenv('DB_NAME'), getenv('DB_USER'), getenv('DB_PASS'));
+    $pdo = new PDO('mysql:host=' . $_ENV['DB_HOST'] . ';dbname=' . $_ENV['DB_NAME'], $_ENV['DB_USER'], $_ENV['DB_PASS']);
     $selectQuery = $pdo->prepare('SELECT value FROM data WHERE id=:id');
     $updateQuery = $pdo->prepare('UPDATE data SET value=:value WHERE id=:id');
 $scope->close();
 
-$messageChannel = $bunny->channel();
-$messageChannel->queueDeclare('message_queue');
-
-$eventsChannel = $bunny->channel();
-$eventsChannel->queueDeclare('events_queue');
-
 $scope = $tracer->startActiveSpan('consuming');
 try {
-    $messageChannel->run(
-        function (Message $message, Channel $channel, Client $bunny) use ($pdo, $selectQuery, $updateQuery, $tracer, $eventsChannel, $logger) {
+    $channel->run(
+        function (Message $message, Channel $channel, Client $bunny) use ($pdo, $selectQuery, $updateQuery, $tracer, $logger) {
             static $counter = 0;
             $counter++;
 
@@ -40,12 +34,12 @@ try {
             $pdo->commit();
             $headers = [];
             $tracer->inject($scope->getSpan()->getContext(), OpenTracing\Formats\HTTP_HEADERS, $headers);
-            $eventsChannel->publish(json_encode(['id' => $msg['id'], 'last_value' => $currentValue, 'counter' => $counter]), $headers, '', 'events_queue');
+            $channel->publish(json_encode(['id' => $msg['id'], 'last_value' => $currentValue, 'counter' => $counter]), $headers, '', 'events_queue');
             $channel->ack($message);
 
             $scope->close();
 
-            $tracer->flush();
+//            $tracer->flush();
 
             if ($counter == 10000) {
                 throw new \Bunny\Exception\ClientException('Processing completed');
@@ -56,7 +50,6 @@ try {
 } catch (\Bunny\Exception\ClientException $e) {
     $logger->error($e->getMessage());
 }
-$eventsChannel->close();
 
 $bunny->disconnect();
 $scope->close();
