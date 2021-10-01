@@ -1,9 +1,5 @@
 # Wydajny i asynchroniczny PHP
-Krzysztof Kowalczykiewicz
-
-[Profitroom](https://www.profitroom.com)
-
-PHPers Summit 2021
+Krzysztof Kowalczykiewicz / [Profitroom](https://www.profitroom.com) / PHPers Summit 2021
 
 ## Założenia eksperymentu
 - serwis `producer` generuje 10000 zleceń wykonania operacji

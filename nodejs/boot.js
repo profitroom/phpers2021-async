@@ -33,7 +33,7 @@ async function boot(process) {
 
     const appSpan = tracer.startSpan('process')
 
-    dotenv.config({path:'../.env'})
+    dotenv.config({path:'../'})
     console.log(process.env)
 
     const span = tracer.startSpan('rabbitmq-connect', {childOf: appSpan})
