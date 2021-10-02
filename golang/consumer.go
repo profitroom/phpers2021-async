@@ -52,13 +52,25 @@ func main() {
 	forever := make(chan bool)
 	go func() {
 		for d := range msgs {
-			var msg map[string]interface{}
 			// fmt.Printf("Processing: %s\n", d.Body)
-			json.Unmarshal([]byte(d.Body), &msg)
-			db.Exec("UPDATE data SET value=? WHERE id=?", msg["value"], msg["id"])
+			processMessage(db)
+			publishEvent(chan)
 		}
 	}()
 
 	fmt.Println("Consuming")
 	<-forever
+}
+
+func processMessage(db) {
+    var msg map[string]interface{}
+    json.Unmarshal([]byte(d.Body), &msg)
+    db.Exec("START TRANSACTION")
+    db.Exec("SELECT value FROM data WHERE id=?", msg["id"])
+    db.Exec("UPDATE data SET value=? WHERE id=?", msg["value"], msg["id"])
+    db.Exec("COMMIT")
+}
+
+func publishEvent() {
+
 }

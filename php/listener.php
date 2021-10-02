@@ -23,9 +23,7 @@ try {
 
         $scope->close();
 
-        $tracer->flush();
-
-        if ($counter == 10000) {
+        if ($counter == $_ENV['BENCHMARK_SIZE']) {
             throw new \Bunny\Exception\ClientException('Listening finished');
         }
     }, 'events_queue');

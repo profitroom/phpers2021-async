@@ -1,9 +1,9 @@
 <?php declare(strict_types=1);
 
-use OpenTracing\Span;
 use OpenTracing\SpanContext;
 use OpenTracing\Tracer;
 use PhpAmqpLib\Message\AMQPMessage;
+use PhpAmqpLib\Channel\AMQPChannel;
 use PhpAmqpLib\Wire\AMQPTable;
 use Swoole\Database\PDOConfig;
 use Swoole\Database\PDOPool;
@@ -22,18 +22,18 @@ Co\run(function () use ($tracer) {
     $stopAfter = $_ENV['BENCHMARK_SIZE'];
 
     $pool = initializeConnectionPool();
-    $channel = createAmqpChannel($tracer);
+    [$channel, $eventsChannel] = createAmqpChannel($tracer);
     $wg = new \Swoole\Coroutine\WaitGroup(); // to count/wait coroutines
 
     $runScope = $tracer->startActiveSpan('consuming');
-    $channel->basic_consume('message_queue', callback: function (AMQPMessage $message) use ($pool, $tracer, $runScope, $wg) {
-        go(function () use ($message, $tracer, $pool, $runScope, $wg) {
+    $channel->basic_consume('message_queue', callback: function (AMQPMessage $message) use ($pool, $tracer, $runScope, $wg, $eventsChannel) {
+        go(function () use ($message, $tracer, $pool, $runScope, $wg, $eventsChannel) {
             $wg->add();
             $span = startTraceableSpan($message, $tracer);
 
             processMessage($message, $pool);
 
-            publishEvent($message, $tracer, $span->getContext());
+            publishEvent($message, $eventsChannel, $tracer, $span->getContext());
 
             $message->ack();
 
@@ -45,6 +45,7 @@ Co\run(function () use ($tracer) {
     // process messages until requested limit
     while ($channel->is_consuming()) {
         if ($wg->count() == $stopAfter) {
+            echo "stop\n";
             break;
         }
         $channel->wait(); // wait for next message to process
@@ -77,11 +78,13 @@ function createAmqpChannel(Tracer $tracer)
     $io = new \Hyperf\Amqp\IO\SwooleIO('localhost', 5672, 10);
     $connection = new \Hyperf\Amqp\AMQPConnection('guest', 'guest', io: $io);
     $channel = $connection->channel($connection->get_free_channel_id());
+    $eventsChannel = $connection->channel($connection->get_free_channel_id());
     $channel->queue_declare('message_queue', false, true, false, false);
     $channel->queue_declare('events_queue', false, true, false, false);
+//    $channel->basic_qos(0, 20, true);
     $scope->close();
 
-    return $channel;
+    return [$channel, $eventsChannel];
 }
 
 function startTraceableSpan(AMQPMessage $message, Tracer $tracer)
@@ -106,16 +109,16 @@ function processMessage(AMQPMessage $message, PDOPool $pool)
     $pdo->beginTransaction();
     $selectQuery->execute([':id' => $id]);
     $currentValue = $selectQuery->fetchColumn();
-    $updateQuery->execute([':id' => $id, ':value' => $currentValue + $value]);
+    $result = $updateQuery->execute([':id' => $id, ':value' => $currentValue + $value]);
     $pdo->commit();
 
     $pool->put($pdo);
 }
 
-function publishEvent(AMQPMessage $message, Tracer $tracer, SpanContext $context)
+function publishEvent(AMQPMessage $message, AMQPChannel $channel, Tracer $tracer, SpanContext $context)
 {
     $headers = [];
     $tracer->inject($context, OpenTracing\Formats\HTTP_HEADERS, $headers);
     $event = new AMQPMessage($message->body, ['application_headers' => new AMQPTable($headers)]);
-    $message->getChannel()->basic_publish($event, routing_key: 'events_queue');
+    $channel->basic_publish($event, routing_key: 'events_queue');
 }

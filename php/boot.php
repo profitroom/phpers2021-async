@@ -48,6 +48,7 @@ $scope = $tracer->startActiveSpan('rabbitmq-connect');
     $bunny = new Client();
     $bunny->connect();
     $channel = $bunny->channel();
+    $channel->qos(0, 5, false);
     $channel->queueDeclare('message_queue', false, true);
     $channel->queueDeclare('events_queue', false, true);
 $scope->close();
